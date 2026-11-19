@@ -1,0 +1,109 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+package "model" {
+  class Planejamento {
+    - titulo : String
+    - participantes : Map<Integer, Participante>
+    - despesas : Map<Integer, Despesa>
+    - proximoId : int
+    + adicionarParticipante(codigo: int, nome: String, orcamentoCentavos: long) : void
+    + editarParticipante(codigo: int, nome: String, orcamentoCentavos: long) : void
+    + removerParticipante(codigo: int) : void
+    + listarParticipantes() : List<Participante>
+    + adicionarDespesa(desc: String, valor: long, fixa: boolean, env: List<Participante>, ess: boolean, prio: int) : void
+    + editarDespesa(id: int, desc: String, valor: long, fixa: boolean, env: List<Participante>, ess: boolean, prio: int) : void
+    + removerDespesa(id: int) : void
+    + listarDespesas() : List<Despesa>
+    + calcularGastoParticipante(p: Participante) : long
+    + calcularCustoTotal() : long
+    + calcularSaldo(p: Participante) : long
+  }
+
+  class Participante {
+    - codigo : int
+    - nome : String
+    - orcamentoCentavos : long
+    + getCodigo() : int
+    + getNome() : String
+    + setNome(nome: String) : void
+    + getOrcamentoCentavos() : long
+    + setOrcamentoCentavos(orcamentoCentavos: long) : void
+    + compareTo(outro: Participante) : int
+  }
+
+  abstract class Despesa {
+    - id : int
+    - descricao : String
+    - valorCentavos : long
+    - participantes : Set<Participante>
+    - essencial : boolean
+    - prioridade : int
+    + {abstract} calcularRateio() : Map<Participante, Long>
+    + {abstract} getTipo() : String
+    + calcularTotal() : long
+    + getValorParticipante(p: Participante) : long
+  }
+
+  class DespesaFixa {
+    + calcularRateio() : Map<Participante, Long>
+    + getTipo() : String
+  }
+
+  class DespesaPorPessoa {
+    + calcularRateio() : Map<Participante, Long>
+    + getTipo() : String
+  }
+
+  class SimuladorAlternativas {
+    + {static} simular(planejamento: Planejamento) : ResultadoSimulacao
+  }
+
+  class ResultadoSimulacao {
+    - viavel : boolean
+    - mensagem : String
+    - despesasMantidas : List<Despesa>
+    - despesasRetiradas : List<Despesa>
+    - somaPrioridades : int
+    - totaisIndividuaisCentavos : Map<Participante, Long>
+    - custoTotalGeralCentavos : long
+  }
+}
+
+package "persistence" {
+  class PersistenciaPlanejamento {
+    + salvar(planejamento: Planejamento, arquivo: File) : void
+    + carregar(arquivo: File) : Planejamento
+  }
+}
+
+package "controller" {
+  class ControlePlanejamento {
+    - planejamento : Planejamento
+    - persistencia : PersistenciaPlanejamento
+    + cadastrarParticipante(...) : void
+    + cadastrarDespesa(...) : void
+    + salvarArquivo(arq: File) : void
+    + carregarArquivo(arq: File) : void
+    + simular() : ResultadoSimulacao
+  }
+}
+
+package "view" {
+  class TelaPrincipal {
+    - controller : ControlePlanejamento
+    - atualizarTela() : void
+  }
+}
+
+Planejamento "1" *-- "0..*" Participante : gerencia >
+Planejamento "1" *-- "0..*" Despesa : contém >
+Despesa "0..*" o-- "1..*" Participante : rateia entre >
+Despesa <|-- DespesaFixa
+Despesa <|-- DespesaPorPessoa
+SimuladorAlternativas ..> Planejamento : analisa
+SimuladorAlternativas ..> ResultadoSimulacao : produz
+ControlePlanejamento --> Planejamento : coordena
+ControlePlanejamento --> PersistenciaPlanejamento : persiste via
+TelaPrincipal --> ControlePlanejamento : aciona
+@enduml
